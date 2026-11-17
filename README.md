@@ -228,6 +228,63 @@ npm run repair -- --data-dir "/你的/数据目录"
 
 管理页和 API 默认只供本机使用。更多安全说明见 [SECURITY.md](SECURITY.md)。
 
+## Docker 与离线镜像
+
+仓库包含 [Dockerfile](Dockerfile) 和 [离线镜像工作流](.github/workflows/docker-offline-image.yml)。镜像构建时会把固定提交的后端源码、uv、Python 3.13 和全部依赖预置到 `/data`，因此容器启动和运行都**不需要联网**，适合内网或隔离环境。
+
+### 使用现成的离线镜像
+
+1. 打开 GitHub 仓库的 **Actions → Docker Offline Image**，下载本次运行生成的 `chatgpt2api-offline-<版本>-linux-amd64`；推送 `v*` 标签时也会自动附加到 Release。
+2. 把压缩包拷到目标机器后导入：
+
+```bash
+gunzip -c chatgpt2api-offline-<版本>-linux-amd64.tar.gz | docker load
+```
+
+3. 启动容器：
+
+```bash
+docker run -d \
+  --name chatgpt2api \
+  --restart unless-stopped \
+  -p 38650:38650 \
+  -p 38651:38651 \
+  -v chatgpt2api-data:/data \
+  chatgpt2api-offline:<版本>
+```
+
+4. 查看本次启动的登录链接：
+
+```bash
+docker logs chatgpt2api | grep 本机登录链接
+```
+
+在浏览器打开该链接即可管理账号；第三方软件仍使用 `http://127.0.0.1:38650/v1`。
+
+| 项目 | 说明 |
+| --- | --- |
+| 数据卷 | 账号、密钥、图片和历史任务都在 `chatgpt2api-data` 的 `/data`；命名卷首次创建会自动带入镜像内已准备好的运行环境，因此依然无需联网 |
+| 宿主机目录挂载 | 改用目录挂载时，需先把镜像内 `/data` 的内容复制到该目录，否则容器会尝试重新下载环境 |
+| 网络暴露 | 容器内监听 `0.0.0.0`，管理页和 API 通过映射端口对外提供；只在本机使用时可在 `-p` 前加 `127.0.0.1:` |
+| 安全 | 登录链接等同于管理权限，请不要公开分享或暴露到公网 |
+| 端口 | 可用环境变量 `CHATGPT2API_PORT`、`CHATGPT2API_WEB_PORT` 调整，同时修改 `-p` 映射 |
+| 架构 | 工作流默认构建 `linux/amd64`；需要 arm64 时修改 `.github/workflows/docker-offline-image.yml` 中的 `platforms` 后重新构建 |
+
+> 本地直接运行（不使用 Docker）时，程序仍然只监听 `127.0.0.1`，行为不变。
+
+### 自行构建离线镜像
+
+```bash
+docker build -t chatgpt2api-offline:local .
+docker save chatgpt2api-offline:local | gzip -9 > chatgpt2api-offline-local.tar.gz
+```
+
+构建阶段需要联网下载后端源码和 Python 环境；如需代理：
+
+```bash
+docker build --build-arg CHATGPT2API_DOWNLOAD_PROXY=http://127.0.0.1:7897 -t chatgpt2api-offline:local .
+```
+
 ## 开源协议
 
 本项目采用 [MIT License](LICENSE) 开源协议。

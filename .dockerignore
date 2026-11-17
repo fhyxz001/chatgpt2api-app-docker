@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+dist
+.chatgpt2api
+.env
+.env.*
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+tests
+docs
+.uploads

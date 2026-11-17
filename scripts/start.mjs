@@ -36,6 +36,8 @@ const HELP = `ChatGPT2API 独立程序（Node.js 20.11+）
   --no-open           不自动打开浏览器
   -h, --help          显示帮助
 
+环境变量 CHATGPT2API_BIND_HOST 可修改监听地址（默认 127.0.0.1，容器内使用 0.0.0.0）。
+
 首次运行自动准备后端及 Python 环境，无需手动安装 Python 或 Docker。
 按 Ctrl+C 停止；账号、密钥和图片保留在数据目录。
 `;
@@ -52,10 +54,11 @@ function openBrowser(url) {
 export async function main() {
   const config = parseOptions();
   if (config.help) { console.info(HELP); return; }
-  const manager = new PlatformBackend(config);
+  const bindHost = process.env.CHATGPT2API_BIND_HOST || '127.0.0.1';
+  const manager = new PlatformBackend({...config, bindHost});
   reportPythonEnvironment(manager);
   const secret = ensureManagedFiles(manager.paths, process.env.CHATGPT2API_KEY || process.env.DSH_CHATGPT2API_KEY || '');
-  const web = createStandaloneServer({manager, secret, webPort: config.webPort});
+  const web = createStandaloneServer({manager, secret, webPort: config.webPort, bindHost});
   let stopping = false, lastStatus = '', timer;
   const stop = async () => {
     if (stopping) return;

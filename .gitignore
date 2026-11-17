@@ -1,5 +1,8 @@
 node_modules/
 
+# 本地构建产物
+dist/
+
 # Local configuration and runtime data
 .env
 .env.*
