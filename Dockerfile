@@ -29,8 +29,8 @@ RUN node scripts/build.mjs
 # 需要代理构建时：
 #   docker build --build-arg CHATGPT2API_DOWNLOAD_PROXY=http://127.0.0.1:7897 .
 ARG CHATGPT2API_DOWNLOAD_PROXY=
-RUN CHATGPT2API_DOWNLOAD_PROXY="$CHATGPT2API_DOWNLOAD_PROXY" \
-      node scripts/manage-backend.mjs repair --data-dir /data \
+RUN if [ -z "$CHATGPT2API_DOWNLOAD_PROXY" ]; then unset CHATGPT2API_DOWNLOAD_PROXY; fi; \
+    node scripts/manage-backend.mjs repair --data-dir /data \
  && rm -rf /data/downloads /data/uv-cache /data/admin-key
 
 EXPOSE 38650 38651
